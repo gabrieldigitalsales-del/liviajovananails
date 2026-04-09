@@ -157,6 +157,6 @@
     // Esconde o loading screen após o app ter tempo de montar e renderizar
     setTimeout(function() {
       hideLoadingScreen();
-    }, 800);
+    }, 1300);
   });
 })();
