@@ -4,13 +4,10 @@
   const SUPABASE_KEY = (window.__SUPABASE_KEY__ || 'sb_publishable_ri5QOHd4SUrVkCG696PIWA_IINiPZ-y');
   const MAIN_MODULE = '/assets/index-ClI75OJ_.js';
   const ADMIN_PATCH = '/admin-enhancer.js';
-
   let supabasePromise = null;
-
   function hasConfig() {
     return !!(SUPABASE_URL && SUPABASE_KEY);
   }
-
   async function getSupabase() {
     if (!hasConfig()) return null;
     if (!supabasePromise) {
@@ -25,7 +22,6 @@
     }
     return supabasePromise;
   }
-
   async function preloadContent() {
     if (!hasConfig()) return;
     try {
@@ -45,14 +41,20 @@
       console.warn('[bootstrap] usando conteúdo local por falha no Supabase', err);
     }
   }
-
+  function hideLoadingScreen() {
+    var el = document.getElementById('loading-screen');
+    if (!el) return;
+    el.classList.add('hide');
+    setTimeout(function() {
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    }, 450);
+  }
   function installPersistenceBridge() {
     if (!hasConfig()) return;
     const originalSetItem = Storage.prototype.setItem;
     const originalRemoveItem = Storage.prototype.removeItem;
     let saveTimer = null;
     let lastPayload = null;
-
     async function pushContent(raw) {
       if (!raw) return;
       try {
@@ -71,7 +73,6 @@
         window.dispatchEvent(new CustomEvent('supabase-save-status', { detail: { ok: false, message: 'Erro ao salvar no Supabase' } }));
       }
     }
-
     Storage.prototype.setItem = function(key, value) {
       originalSetItem.call(this, key, value);
       if (this === localStorage && key === STORAGE_KEY) {
@@ -81,19 +82,16 @@
         saveTimer = setTimeout(function(){ pushContent(lastPayload); }, 500);
       }
     };
-
     Storage.prototype.removeItem = function(key) {
       originalRemoveItem.call(this, key);
       if (this === localStorage && key === STORAGE_KEY) {
         lastPayload = null;
       }
     };
-
     window.__SITE_SUPABASE__ = {
       url: SUPABASE_URL,
       key: SUPABASE_KEY,
       storageKey: STORAGE_KEY,
-
       async saveImagePath(pathParts, url) {
         const supabase = await getSupabase();
         if (!supabase) throw new Error('Supabase indisponível');
@@ -122,7 +120,6 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
         window.dispatchEvent(new CustomEvent('site-content-updated'));
       },
-
       async uploadImage(file) {
         const supabase = await getSupabase();
         if (!supabase) throw new Error('Supabase indisponível');
@@ -142,21 +139,24 @@
       }
     };
   }
-
   function loadApp() {
     var script = document.createElement('script');
     script.type = 'module';
     script.src = MAIN_MODULE;
     document.head.appendChild(script);
-
     var patch = document.createElement('script');
     patch.src = ADMIN_PATCH;
     patch.defer = true;
     document.head.appendChild(patch);
   }
-
- installPersistenceBridge();
-  loadApp();
-  preloadContent();
+  // Aguarda o Supabase antes de carregar o app
+  // assim o localStorage já tem o conteúdo correto quando o React renderiza
+  preloadContent().finally(function() {
+    installPersistenceBridge();
+    loadApp();
+    // Esconde o loading screen após o app ter tempo de montar e renderizar
+    setTimeout(function() {
+      hideLoadingScreen();
+    }, 800);
   });
 })();
