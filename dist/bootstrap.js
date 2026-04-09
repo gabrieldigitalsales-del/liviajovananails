@@ -155,8 +155,8 @@
     document.head.appendChild(patch);
   }
 
-  preloadContent().finally(function(){
-    installPersistenceBridge();
-    loadApp();
+ installPersistenceBridge();
+  loadApp();
+  preloadContent();
   });
 })();
